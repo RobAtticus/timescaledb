@@ -45,6 +45,8 @@ END$$;
 -- We then convert it to timestamptz as though it was at UTC
 -- finally, we convert it to the internal represtentation back.
 
+alter table _timescaledb_catalog.dimension_slice drop constraint dimension_slice_dimension_id_range_start_range_end_key;
+
 UPDATE _timescaledb_catalog.dimension_slice ds
 SET 
 range_end = _timescaledb_internal.to_unix_microseconds(timezone('UTC',_timescaledb_internal.to_timestamp(range_end)::timestamp)),
@@ -52,3 +54,4 @@ range_start = _timescaledb_internal.to_unix_microseconds(timezone('UTC',_timesca
 FROM _timescaledb_catalog.dimension d
 WHERE ds.dimension_id = d.id AND d.column_type = 'timestamp'::regtype;
 
+alter table _timescaledb_catalog.dimension_slice add constraint dimension_slice_dimension_id_range_start_range_end_key unique(dimension_id, range_start, range_end);

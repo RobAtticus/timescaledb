@@ -13,6 +13,7 @@ INNER JOIN _timescaledb_catalog.hypertable hypertable ON (chunk.hypertable_id = 
 INNER JOIN pg_constraint pg_chunk_con ON (
         pg_chunk_con.conrelid = format('%I.%I', chunk.schema_name, chunk.table_name)::regclass
         AND pg_chunk_con.conname = chunk_con.constraint_name
+        AND pg_chunk_con.contype != 'f'
 )
 INNER JOIN pg_class pg_chunk_index_class ON (
     pg_chunk_con.conindid = pg_chunk_index_class.oid
@@ -2558,6 +2559,8 @@ END$$;
 -- We then convert it to timestamptz as though it was at UTC
 -- finally, we convert it to the internal represtentation back.
 
+alter table _timescaledb_catalog.dimension_slice drop constraint dimension_slice_dimension_id_range_start_range_end_key;
+
 UPDATE _timescaledb_catalog.dimension_slice ds
 SET 
 range_end = _timescaledb_internal.to_unix_microseconds(timezone('UTC',_timescaledb_internal.to_timestamp(range_end)::timestamp)),
@@ -2565,3 +2568,4 @@ range_start = _timescaledb_internal.to_unix_microseconds(timezone('UTC',_timesca
 FROM _timescaledb_catalog.dimension d
 WHERE ds.dimension_id = d.id AND d.column_type = 'timestamp'::regtype;
 
+alter table _timescaledb_catalog.dimension_slice add constraint dimension_slice_dimension_id_range_start_range_end_key unique(dimension_id, range_start, range_end);
